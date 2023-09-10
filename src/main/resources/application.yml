@@ -1,9 +1,9 @@
 spring:
   datasource:
-    driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://127.0.0.1:3306/querydsl?characterEncoding=UTF-8&serverTimezone=UTC
-    username: root
-    password: mysql12#$
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:tcp://localhost/~/querydsl
+    username: sa
+    password:
 
   jpa:
     hibernate:
@@ -18,3 +18,9 @@ logging:
     org.hibernate:
       type.descriptor.sql: trace #show parameter binding
       SQL: DEBUG
+
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
