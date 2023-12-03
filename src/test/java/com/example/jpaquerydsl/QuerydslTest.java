@@ -4,6 +4,7 @@ import com.example.jpaquerydsl.entity.Member;
 import com.example.jpaquerydsl.entity.QMember;
 import com.example.jpaquerydsl.entity.Team;
 import com.querydsl.core.QueryResults;
+import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 import static com.example.jpaquerydsl.entity.QMember.member;
+import static com.example.jpaquerydsl.entity.QTeam.team;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 @SpringBootTest
@@ -126,5 +128,32 @@ class QuerydslTest {
                 .orderBy(QMember.member.name.desc().nullsLast())
                 .offset(0).limit(3)
                 .fetchResults();
+    }
+
+    @Test
+    void groupByTest() {
+        List<Tuple> result = jpaQueryFactory.select(team.name, member.age.avg())
+                .from(member)
+                .join(member.team, team)
+                .groupBy(team.name) // Inner Join으로 인해 중복된 값으로 리스트 개수 만큼 나오는 것을 방지
+                .fetch();
+
+        Tuple team1 = result.get(0);
+        Tuple team2 = result.get(1);
+
+        assertThat(team1.get(team.name)).isEqualTo("companyA");
+        assertThat(team1.get(member.age.avg())).isEqualTo(15);
+    }
+
+    @Test
+    void joinTest() {
+        List<Member> companyA = jpaQueryFactory.select(member)
+                .leftJoin(member.team, team)
+                .where(team.name.eq("companyA"))
+                .fetch(); // JPQL Join 쿼리와 동일함.
+
+        assertThat(companyA)
+                .extracting("name")
+                .containsExactly("yang1", "yang2"); // 결과에서 해당 이름들이 포함되었는지 확인
     }
 }
