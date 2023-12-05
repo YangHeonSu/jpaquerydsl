@@ -5,6 +5,7 @@ import com.example.jpaquerydsl.entity.QMember;
 import com.example.jpaquerydsl.entity.Team;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -147,7 +148,7 @@ class QuerydslTest {
 
     @Test
     void joinTest() {
-        List<Member> companyA = jpaQueryFactory.select(member)
+        List<Member> companyA = jpaQueryFactory.selectFrom(member)
                 .leftJoin(member.team, team)
                 .where(team.name.eq("companyA"))
                 .fetch(); // JPQL Join 쿼리와 동일함.
@@ -155,5 +156,63 @@ class QuerydslTest {
         assertThat(companyA)
                 .extracting("name")
                 .containsExactly("yang1", "yang2"); // 결과에서 해당 이름들이 포함되었는지 확인
+    }
+
+    // member와 team join 후 team 이름이 companyA인 team만 조인, member는 모두 조회
+    @Test
+    void joinTest1() {
+        //연관관계가 있는 조인일 경우
+        List<Tuple> companyA1 = jpaQueryFactory.select(member, team)
+                .from(member)
+                .leftJoin(member.team, team)
+//                .where(team.name.eq("companyA")) -> inner join일 경우 on절을 사용했을 때와 where절이 사용했을 시가 동일
+                .on(team.name.eq("companyA"))
+                .fetch();
+        for (Tuple tuple : companyA1) {
+            System.out.println("tuple : " + tuple);
+        }
+        System.out.println("@@@@@@@@@@@@@@@@@@@@@");
+        entityManager.persist(new Member("companyA"));
+        entityManager.persist(new Member("companyB"));
+
+
+        //연관관계가 없는 세타 조인일 경우
+        List<Tuple> companyA2 = jpaQueryFactory.select(member, team)
+                .from(member)
+                .leftJoin(team)
+                .on(team.name.eq(member.name))
+                .fetch();
+
+        for (Tuple tuple : companyA2) {
+            System.out.println("tuple : " + tuple);
+        }
+    }
+
+    @Test
+    void subQueryTest() {
+        QMember memberSub = new QMember("memberSub");
+        // where절 subQuery
+        List<Member> fetch1 = jpaQueryFactory.selectFrom(member)
+                .where(member.age.in(
+                        JPAExpressions
+                                .select(memberSub.age)
+                                .from(memberSub)
+                                .where(memberSub.age.gt(10))
+                )).fetch();
+        for (Member member1 : fetch1) {
+            System.out.println("member = " + member1);
+        }
+
+        System.out.println("@@@@@@@@@@@@@@@@@@@@");
+        // select절 subQuery
+        List<Tuple> fetch = jpaQueryFactory.select(member.name
+                        , JPAExpressions.select(memberSub.age.avg()).from(memberSub))
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : fetch) {
+            System.out.println("tuple = " + tuple);
+        }
+
     }
 }

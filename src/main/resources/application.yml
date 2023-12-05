@@ -10,7 +10,7 @@ spring:
       ddl-auto: create # 재실행마다 테이블 초기화
     properties:
       hibernate:
-        format_sql: true # To beautify or pretty print the SQL
+        format_sql: false # To beautify or pretty print the SQL
         show_sql: true # show sql
 
 logging:
