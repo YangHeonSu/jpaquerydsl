@@ -1,23 +1,26 @@
 package com.example.jpaquerydsl;
 
-import com.example.jpaquerydsl.entity.Member;
-import com.example.jpaquerydsl.entity.QMember;
-import com.example.jpaquerydsl.entity.Team;
+import com.example.jpaquerydsl.entity.*;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.expression.spel.ast.Projection;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 import static com.example.jpaquerydsl.entity.QMember.member;
 import static com.example.jpaquerydsl.entity.QTeam.team;
+import static org.assertj.core.api.AssertionsForClassTypes.fail;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 @SpringBootTest
@@ -190,6 +193,11 @@ class QuerydslTest {
 
     @Test
     void subQueryTest() {
+
+        /**
+         * JPA에서 서브쿼리는 select, where절에서만 가능
+         * 서브쿼리 작성시 QMember memberSub = new QMember("memberSub") 처럼 alias 새로 생성
+         */
         QMember memberSub = new QMember("memberSub");
         // where절 subQuery
         List<Member> fetch1 = jpaQueryFactory.selectFrom(member)
@@ -213,6 +221,91 @@ class QuerydslTest {
         for (Tuple tuple : fetch) {
             System.out.println("tuple = " + tuple);
         }
+    }
 
+    @Test
+    void projectionsResultJPQL() {
+        // 순수 JPA으로 프로잭션 결과를 DTO로 반환할 경우 반환 DTO를 패키지명부터 작성하고 DTO 생성자 필수(AllArgsConstructor)
+        List<MemberDTO> members = entityManager.createQuery("select new com.example.jpaquerydsl.entity.MemberDTO(m.name, m.age) from Member m", MemberDTO.class)
+                .getResultList();
+        for (MemberDTO memberDTO : members) {
+            System.out.println("memberDTO = " + memberDTO);
+        }
+    }
+
+    @Test
+    void projectionResultQueryDsl() {
+
+        /*
+         * Querydsl에서 프로잭션 결과를 DTO로 반환할 경우 방법은 3가지
+         * 1. 프로퍼티 접근 Projections.bean -> DTO의 Setter !!@NoArgsConstructor 필수
+         * 2. 필드 직접 접근 Projections.field -> DTO의 필드에 바로 값이 들어감
+         * 3. 생성자 접근 Projections.construct -> DTO 필드 타입과 맞아야함 member.name -> dto의 name의 타입과 같아야함
+         */
+        // 프로퍼티 접근
+        List<MemberDTO> member1 = jpaQueryFactory.select(Projections.bean(MemberDTO.class
+                        , member.name
+                        , member.age))
+                .from(member)
+                .fetch();
+        for (MemberDTO memberDTO : member1) {
+            System.out.println("memberDTO = " + memberDTO);
+        }
+        // 필드 직접 접근
+        List<MemberDTO> member2 = jpaQueryFactory.select(Projections.fields(MemberDTO.class
+                        , member.name
+                        , member.age))
+                .from(member)
+                .fetch();
+        for (MemberDTO memberDTO : member2) {
+            System.out.println("memberDTO = " + memberDTO);
+        }
+        // 생성자 접근
+        List<MemberDTO> member3 = jpaQueryFactory.select(Projections.constructor(MemberDTO.class
+                        , member.name
+                        , member.age))
+                .from(member)
+                .fetch();
+        for (MemberDTO memberDTO : member3) {
+            System.out.println("memberDTO = " + memberDTO);
+        }
+    }
+
+    @Test
+    void projectionResultQueryProjection() {
+        // Projections.constructor와 비슷하지만 차이점은 @QueryProjection은 컴퍼일시점부터 오류를 찾을 수 있음.
+        List<MemberDTO> members = jpaQueryFactory.select(new QMemberDTO(member.name, member.age))
+                .from(member)
+                .fetch();
+        for (MemberDTO memberDTO : members) {
+            System.out.println("memberDTO = " + memberDTO);
+        }
+    }
+
+    @Test
+    void dynamicQuery() {
+        String name = "yang";
+        Integer age = 10;
+        List<Member> members = search(name, age);
+
+        for (Member member1 : members) {
+            System.out.println("member1 = " + member1);
+        }
+    }
+
+    List<Member> search(String nameValue, Integer ageValue) {
+
+        BooleanBuilder booleanBuilder = new BooleanBuilder();
+        if (nameValue != null) {
+            booleanBuilder.and(member.name.contains(nameValue));
+        }
+
+        if (ageValue!= null) {
+            booleanBuilder.and(member.age.eq(ageValue));
+        }
+        return jpaQueryFactory.select(member)
+                .from(member)
+                .where(booleanBuilder)
+                .fetch();
     }
 }
