@@ -4,6 +4,7 @@ import com.example.jpaquerydsl.entity.*;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.expression.spel.ast.Projection;
+import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -294,7 +296,7 @@ class QuerydslTest {
     }
 
     List<Member> search(String nameValue, Integer ageValue) {
-
+        // 동적 쿼리 BooleanBuilder 사용
         BooleanBuilder booleanBuilder = new BooleanBuilder();
         if (nameValue != null) {
             booleanBuilder.and(member.name.contains(nameValue));
@@ -307,5 +309,51 @@ class QuerydslTest {
                 .from(member)
                 .where(booleanBuilder)
                 .fetch();
+    }
+
+    @Test
+    void dynamicQuery2() {
+        String name = "yang";
+        Integer age = 10;
+        List<Member> members = findMember(name, age);
+
+        for (Member member1 : members) {
+            System.out.println("member1 = " + member1);
+        }
+    }
+
+    List<Member> findMember(String nameValue, Integer ageValue) {
+        // 동적 쿼리 where MultiParameter 사용 -> 재사용 가능하다는 장점
+        return jpaQueryFactory.select(member)
+                .from(member)
+                .where(nameContain(nameValue), ageEq(ageValue))
+                .fetch();
+    }
+
+    private Predicate nameContain(String nameValue) {
+        return nameValue != null ? member.name.contains(nameValue) : null;
+    }
+
+    private Predicate ageEq(Integer ageValue) {
+        return ageValue != null ? member.age.eq(ageValue) : null;
+    }
+    
+    @Test
+    @Commit
+    void bulkUpdate() {
+        long updateCount = jpaQueryFactory.update(member)
+                .set(member.name, "changeYang")
+                .where(member.age.lt(28)) // 28살 이하일 경우
+                .execute();
+
+        // bulk연산 시 문제점으로 DB는 값이 변경되었지만 영속성 컨텍스트에는 적용이 되지않아 SELECT 시 변경 전 값으로 가져옴
+        // 해결방안으로 영속성 컨텍스트에 있는 것을 DB에 보내고 초기화 flush, clear
+        entityManager.flush();
+        entityManager.clear();
+
+        List<Member> members = jpaQueryFactory.selectFrom(member).fetch();
+        for (Member member1 : members) {
+            System.out.println("member1 = " + member1);
+        }
     }
 }
