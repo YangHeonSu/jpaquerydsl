@@ -1,4 +1,4 @@
-package com.example.jpaquerydsl.entity;
+package com.example.jpaquerydsl.domain;
 
 import com.querydsl.core.annotations.QueryProjection;
 import lombok.Data;

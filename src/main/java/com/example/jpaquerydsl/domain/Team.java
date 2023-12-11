@@ -1,4 +1,4 @@
-package com.example.jpaquerydsl.entity;
+package com.example.jpaquerydsl.domain;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

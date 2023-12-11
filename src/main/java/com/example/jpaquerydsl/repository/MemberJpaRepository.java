@@ -1,14 +1,20 @@
 package com.example.jpaquerydsl.repository;
 
-import com.example.jpaquerydsl.entity.Member;
+import com.example.jpaquerydsl.domain.Member;
+import com.example.jpaquerydsl.domain.MemberTeamDTO;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Optional;
 
-import static com.example.jpaquerydsl.entity.QMember.member;
+import static com.example.jpaquerydsl.domain.QMember.member;
+import static com.example.jpaquerydsl.domain.QTeam.team;
 
 // 순수 JPA Repository
 @Repository
@@ -61,5 +67,57 @@ public class MemberJpaRepository {
         // Querydsl
         return Optional.ofNullable(jpaQueryFactory.selectFrom(member).where(member.id.eq(id)).fetchOne());
     }
+    
+    /**
+     *  동적쿼리 Builder를 통해 회원 및 팀 정보 조회
+     */
+    public List<MemberTeamDTO> findMemberByBuilder(String userName, String teamName) {
+        BooleanBuilder booleanBuilder = new BooleanBuilder();
+        if (StringUtils.hasText(userName)) {
+            booleanBuilder.and(member.name.contains(userName));
+        }
+
+        if (StringUtils.hasText(teamName)) {
+            booleanBuilder.and(team.name.contains(teamName));
+        }
+
+       return jpaQueryFactory
+                .select(Projections.fields(MemberTeamDTO.class,
+                        member.id.as("memberId"),
+                        member.name.as("userName"),
+                        member.age,
+                        team.id.as("teamId"),
+                        team.name.as("teamName")))
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(booleanBuilder)
+                .fetch();
+    }
+
+    /**
+     *  동적쿼리 where절을 통해 회원 및 팀 정보 조회
+     */
+    public List<MemberTeamDTO> findMemberBySearchKeyword(String userName, String teamName) {
+        return jpaQueryFactory
+                .select(Projections.fields(MemberTeamDTO.class,
+                        member.id.as("memberId"),
+                        member.name.as("userName"),
+                        member.age,
+                        team.id.as("teamId"),
+                        team.name.as("teamName")))
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(userNameContain(userName), teamNameContain(teamName))
+                .fetch();
+    }
+
+    private BooleanExpression userNameContain(String userName) {
+        return StringUtils.hasText(userName) ? member.name.contains(userName) : null;
+    }
+
+    private BooleanExpression teamNameContain(String teamName) {
+        return StringUtils.hasText(teamName) ? team.name.contains(teamName) : null;
+    }
+
 
 }

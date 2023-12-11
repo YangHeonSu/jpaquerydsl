@@ -1,6 +1,6 @@
 package com.example.jpaquerydsl;
 
-import com.example.jpaquerydsl.entity.*;
+import com.example.jpaquerydsl.domain.*;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
@@ -9,19 +9,17 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.TypedQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.expression.spel.ast.Projection;
 import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static com.example.jpaquerydsl.entity.QMember.member;
-import static com.example.jpaquerydsl.entity.QTeam.team;
+import static com.example.jpaquerydsl.domain.QMember.member;
+import static com.example.jpaquerydsl.domain.QTeam.team;
 import static org.assertj.core.api.AssertionsForClassTypes.fail;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
@@ -228,7 +226,7 @@ class QuerydslTest {
     @Test
     void projectionsResultJPQL() {
         // 순수 JPA으로 프로잭션 결과를 DTO로 반환할 경우 반환 DTO를 패키지명부터 작성하고 DTO 생성자 필수(AllArgsConstructor)
-        List<MemberDTO> members = entityManager.createQuery("select new com.example.jpaquerydsl.entity.MemberDTO(m.name, m.age) from Member m", MemberDTO.class)
+        List<MemberDTO> members = entityManager.createQuery("select new com.example.jpaquerydsl.domain.MemberDTO(m.name, m.age) from Member m", MemberDTO.class)
                 .getResultList();
         for (MemberDTO memberDTO : members) {
             System.out.println("memberDTO = " + memberDTO);
