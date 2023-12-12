@@ -1,6 +1,7 @@
 package com.example.jpaquerydsl.repository;
 
 import com.example.jpaquerydsl.domain.Member;
+import com.example.jpaquerydsl.domain.MemberSearch;
 import com.example.jpaquerydsl.domain.MemberTeamDTO;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
@@ -71,14 +72,14 @@ public class MemberJpaRepository {
     /**
      *  동적쿼리 Builder를 통해 회원 및 팀 정보 조회
      */
-    public List<MemberTeamDTO> findMemberByBuilder(String userName, String teamName) {
+    public List<MemberTeamDTO> findMemberByBuilder(MemberSearch memberSearch) {
         BooleanBuilder booleanBuilder = new BooleanBuilder();
-        if (StringUtils.hasText(userName)) {
-            booleanBuilder.and(member.name.contains(userName));
+        if (StringUtils.hasText(memberSearch.getUserName())) {
+            booleanBuilder.and(member.name.contains(memberSearch.getUserName()));
         }
 
-        if (StringUtils.hasText(teamName)) {
-            booleanBuilder.and(team.name.contains(teamName));
+        if (StringUtils.hasText(memberSearch.getTeamName())) {
+            booleanBuilder.and(team.name.contains(memberSearch.getTeamName()));
         }
 
        return jpaQueryFactory
@@ -97,7 +98,7 @@ public class MemberJpaRepository {
     /**
      *  동적쿼리 where절을 통해 회원 및 팀 정보 조회
      */
-    public List<MemberTeamDTO> findMemberBySearchKeyword(String userName, String teamName) {
+    public List<MemberTeamDTO> findMemberBySearchKeyword(MemberSearch memberSearch) {
         return jpaQueryFactory
                 .select(Projections.fields(MemberTeamDTO.class,
                         member.id.as("memberId"),
@@ -107,7 +108,7 @@ public class MemberJpaRepository {
                         team.name.as("teamName")))
                 .from(member)
                 .leftJoin(member.team, team)
-                .where(userNameContain(userName), teamNameContain(teamName))
+                .where(userNameContain(memberSearch.getUserName()), teamNameContain(memberSearch.getTeamName()))
                 .fetch();
     }
 

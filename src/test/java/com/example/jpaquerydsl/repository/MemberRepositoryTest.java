@@ -13,26 +13,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @Transactional
-class MemberJpaRepositoryTest {
-
+public class MemberRepositoryTest {
     @Autowired
     EntityManager entityManager;
 
-    @Autowired MemberJpaRepository memberJpaRepository;
+    @Autowired MemberRepository memberRepository;
 
     @Test
-    void querydslTest() {
+    public void querydslTest() {
         Member member = new Member("yang1", 28);
-        memberJpaRepository.save(member);
+        memberRepository.save(member);
 
-        List<Member> members = memberJpaRepository.findAll();
+        List<Member> members = memberRepository.findAll();
         assertThat(members).containsExactly(member);
 
-        Member memberById = memberJpaRepository.findById(member.getId()).get();
+        Member memberById = memberRepository.findById(member.getId()).get();
         assertThat(memberById).isEqualTo(member);
 
-        List<Member> membersByName = memberJpaRepository.findByName("yang1");
+        List<Member> membersByName = memberRepository.findByName("yang1");
         assertThat(membersByName).containsExactly(member);
     }
-
 }
